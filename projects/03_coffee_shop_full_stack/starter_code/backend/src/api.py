@@ -4,7 +4,7 @@ from sqlalchemy import exc
 import json
 from flask_cors import CORS
 
-from .database.models import db_drop_and_create_all, setup_db, Drink
+from database.models import db_drop_and_create_all, setup_db, Drink
 from .auth.auth import AuthError, requires_auth
 
 app = Flask(__name__)
@@ -12,7 +12,7 @@ setup_db(app)
 CORS(app)
 
 '''
-@TODO uncomment the following line to initialize the datbase
+@TODO uncomment the following line to initialize the database
 !! NOTE THIS WILL DROP ALL RECORDS AND START YOUR DB FROM SCRATCH
 !! NOTE THIS MUST BE UNCOMMENTED ON FIRST RUN
 '''
@@ -28,7 +28,6 @@ CORS(app)
         or appropriate status code indicating reason for failure
 '''
 
-
 '''
 @TODO implement endpoint
     GET /drinks-detail
@@ -38,6 +37,18 @@ CORS(app)
         or appropriate status code indicating reason for failure
 '''
 
+@app.route('/drinks-detail', methods=['GET'])
+@requires_auth('get:drinks-detail')
+def get_drink_details(user):
+    print(user)
+    if ('get:drinks-detail' in user['permissions']):
+        drinks = Drink.query.all()
+
+        drinks = [drink.long() for drink in drinks]
+
+        return jsonify({"success": True, "drinks": drinks}), 200
+    else:
+        abort(403)
 
 '''
 @TODO implement endpoint
@@ -48,6 +59,23 @@ CORS(app)
     returns status code 200 and json {"success": True, "drinks": drink} where drink an array containing only the newly created drink
         or appropriate status code indicating reason for failure
 '''
+
+@app.route('/drinks', methods=['post'])
+@requires_auth('post:drinks')
+def create_drink(jwt):
+    body = request.get_json()
+    title= body.get('title', None)
+    recipe= body.get('recipe', None)
+
+    drink = Drink(title=title , recipe=json.dumps(recipe))
+    drink.insert()
+
+    # drinks = [drink.long() for drink in Drink.query.all()]
+
+    return jsonify ({
+        "success": True ,
+        "drinks": drink.long(),
+      }), 200
 
 
 '''
@@ -62,6 +90,34 @@ CORS(app)
         or appropriate status code indicating reason for failure
 '''
 
+@app.route('/drinks/<int:drink_id>', methods=['patch'])
+@requires_auth('patch:drinks')
+def edit_drink(jwt, drink_id):
+
+    try:
+        drink = Drink.query.filter_by(id=drink_id).one_or_none()
+        if not drink:
+            abort(404)
+
+        body = request.get_json()
+
+        title = body.get('title', None)
+        recipe = body.get('recipe', [])
+
+        if title == '':
+            abort(400)
+
+        drink.title = title
+        drink.recipe = json.dumps(recipe)
+        drink.update()
+
+        return jsonify ({
+            "success": True ,
+            "drinks": drink.long(),
+          }), 200
+
+    except Exception as error:
+        raise error
 
 '''
 @TODO implement endpoint
@@ -74,6 +130,22 @@ CORS(app)
         or appropriate status code indicating reason for failure
 '''
 
+@app.route('/drinks<int:drink_id>', methods=['DELETE'])
+@requires_auth('delete:drinks')
+def remove_drink(jwt, drink_id):
+
+    try:
+        drink = Drink.query.filter_by(id=drink_id).one_or_none()
+        if not drink:
+            abort(404)
+
+        drink.delete()
+
+        return jsonify({"success": True, "delete": drink_id}), 200
+
+    except Exception as error:
+        raise error
+
 
 ## Error Handling
 '''
@@ -82,7 +154,7 @@ Example error handling for unprocessable entity
 @app.errorhandler(422)
 def unprocessable(error):
     return jsonify({
-                    "success": False, 
+                    "success": False,
                     "error": 422,
                     "message": "unprocessable"
                     }), 422
@@ -91,7 +163,7 @@ def unprocessable(error):
 @TODO implement error handlers using the @app.errorhandler(error) decorator
     each error handler should return (with approprate messages):
              jsonify({
-                    "success": False, 
+                    "success": False,
                     "error": 404,
                     "message": "resource not found"
                     }), 404
@@ -100,11 +172,11 @@ def unprocessable(error):
 
 '''
 @TODO implement error handler for 404
-    error handler should conform to general task above 
+    error handler should conform to general task above
 '''
 
 
 '''
 @TODO implement error handler for AuthError
-    error handler should conform to general task above 
+    error handler should conform to general task above
 '''
