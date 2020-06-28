@@ -174,9 +174,47 @@ def unprocessable(error):
 @TODO implement error handler for 404
     error handler should conform to general task above
 '''
-
+@app.errorhandler(404)
+def unprocessable(error):
+    return jsonify({
+                    "success": False,
+                    "error": 404,
+                    "message": "Resource not found"
+                    }), 404
 
 '''
 @TODO implement error handler for AuthError
     error handler should conform to general task above
 '''
+
+@app.errorhandler(AuthError)
+def authentification_error(error):
+    return jsonify({
+                    "success": False,
+                    "error": error.error,
+                    "message": "Authentification error"
+                    }), error.status_code
+
+@app.errorhandler(403)
+def forbidden(error):
+    return jsonify({
+                    "success": False,
+                    "error": 403,
+                    "message": "Forbidden"
+                    }), 403
+
+@app.errorhandler(400)
+def bad_request(error):
+    return jsonify({
+                    "success": False,
+                    "error": 400,
+                    "message": "Bad request"
+                    }), 400
+
+@app.errorhandler(405)
+def unallowed_method(error):
+    return jsonify({
+                    "success": False,
+                    "error": 405,
+                    "message": "Method not allowed"
+                    }), 405
