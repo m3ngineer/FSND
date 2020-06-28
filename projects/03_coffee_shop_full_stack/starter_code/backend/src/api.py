@@ -40,15 +40,20 @@ CORS(app)
 @app.route('/drinks-detail', methods=['GET'])
 @requires_auth('get:drinks-detail')
 def get_drink_details(user):
-    print(user)
-    if ('get:drinks-detail' in user['permissions']):
-        drinks = Drink.query.all()
 
-        drinks = [drink.long() for drink in drinks]
+    try:
+        if ('get:drinks-detail' in user['permissions']):
+            drinks = Drink.query.all()
+            drinks = [drink.long() for drink in drinks]
 
-        return jsonify({"success": True, "drinks": drinks}), 200
-    else:
-        abort(403)
+            return jsonify({
+                    "success": True,
+                    "drinks": drinks
+                }), 200
+        else:
+            abort(403)
+    except Exception as error:
+        raise error
 
 '''
 @TODO implement endpoint
@@ -63,20 +68,22 @@ def get_drink_details(user):
 @app.route('/drinks', methods=['post'])
 @requires_auth('post:drinks')
 def create_drink(jwt):
-    body = request.get_json()
-    title= body.get('title', None)
-    recipe= body.get('recipe', None)
 
-    drink = Drink(title=title , recipe=json.dumps(recipe))
-    drink.insert()
+    try:
+        body = request.get_json()
+        title = body.get('title', None)
+        recipe = body.get('recipe', None)
 
-    # drinks = [drink.long() for drink in Drink.query.all()]
+        drink = Drink(title=title , recipe=json.dumps(recipe))
+        drink.insert()
 
-    return jsonify ({
-        "success": True ,
-        "drinks": drink.long(),
-      }), 200
+        return jsonify ({
+            "success": True ,
+            "drinks": drink.long(),
+          }), 200
 
+    except Exception as error:
+        raise error
 
 '''
 @TODO implement endpoint
@@ -130,7 +137,7 @@ def edit_drink(jwt, drink_id):
         or appropriate status code indicating reason for failure
 '''
 
-@app.route('/drinks<int:drink_id>', methods=['DELETE'])
+@app.route('/drinks/<int:drink_id>', methods=['DELETE'])
 @requires_auth('delete:drinks')
 def remove_drink(jwt, drink_id):
 
