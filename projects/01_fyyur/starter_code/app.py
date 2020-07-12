@@ -36,12 +36,17 @@ class Venue(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String)
+    genres = db.Column(db.String(120))
     city = db.Column(db.String(120))
     state = db.Column(db.String(120))
     address = db.Column(db.String(120))
     phone = db.Column(db.String(120))
     image_link = db.Column(db.String(500))
+    website = db.Column(db.String(120))
     facebook_link = db.Column(db.String(120))
+    seeking_talent = db.Column(db.Boolean)
+    seeking_description = db.Column(db.String(500))
+    image_link = db.Column(db.String(500))
     show = db.relationship('Show', backref='Venue', lazy=True, cascade='delete')
 
     # TODO: implement any missing fields, as a database migration using Flask-Migrate
@@ -94,6 +99,45 @@ app.jinja_env.filters['datetime'] = format_datetime
 def index():
   return render_template('pages/home.html')
 
+@app.route('/db')
+def create_db_exampes():
+
+    newVenue = Venue(id = 1,
+                    name = 'The Musical Hop',
+                    genres = '["Jazz", "Reggae", "Swing", "Classical", "Folk"]',
+                    city = 'San Francisco',
+                    state = 'CA',
+                    address = '1015 Folsom Street',
+                    phone = '123-123-1234',
+                    website = 'https://www.themusicalhop.com',
+                    facebook_link = 'https://www.facebook.com/TheMusicalHop',
+                    seeking_talent = True,
+                    seeking_description = 'We are on the lookout for a local artist to play every two weeks. Please call us.',
+                    image_link = 'https://images.unsplash.com/photo-1543900694-133f37abaaa5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=400&q=60',
+                    )
+
+    db.session.add(newVenue)
+    # db.session.commit()
+
+    newVenue = Venue(id = 2,
+                    name = 'The Dueling Pianos Bar',
+                    genres = '["Classical", "R&B", "Hip-Hop"]',
+                    city = 'New York',
+                    state = 'NY',
+                    address = '335 Delancey Street',
+                    phone = '914-003-1132',
+                    website = 'https://www.theduelingpianos.com',
+                    facebook_link = 'https://www.facebook.com/theduelingpianos',
+                    seeking_talent = False,
+                    seeking_description = 'We are on the lookout for a local artist to play every two weeks. Please call us.',
+                    image_link = 'https://images.unsplash.com/photo-1497032205916-ac775f0649ae?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=750&q=80',
+                    )
+    db.session.add(newVenue)
+    # db.session.commit()
+
+    print('Venue inserted.')
+
+    return 'Venue table successfully created.'
 
 #  Venues
 #  ----------------------------------------------------------------
@@ -102,27 +146,53 @@ def index():
 def venues():
   # TODO: replace with real venues data.
   #       num_shows should be aggregated based on number of upcoming shows per venue.
-  data=[{
-    "city": "San Francisco",
-    "state": "CA",
-    "venues": [{
-      "id": 1,
-      "name": "The Musical Hop",
-      "num_upcoming_shows": 0,
-    }, {
-      "id": 3,
-      "name": "Park Square Live Music & Coffee",
-      "num_upcoming_shows": 1,
-    }]
-  }, {
-    "city": "New York",
-    "state": "NY",
-    "venues": [{
-      "id": 2,
-      "name": "The Dueling Pianos Bar",
-      "num_upcoming_shows": 0,
-    }]
-  }]
+
+  venues = Venue.query.all()
+        # .filter_by(hcpcs_code=hcpcs_code)
+
+  data = []
+
+  venue_cities = Venue.query.with_entities(Venue.city, Venue.state).distinct()
+  venue_cities = [city_state for city_state in venue_cities]
+  data = [{'city_state': city_state[0] + ', ' + city_state[1],
+            'city': city_state[0],
+            'state': city_state[1],
+            'venues': []
+            } for city_state in venue_cities]
+
+  print(data)
+
+  for venue in venues:
+      city_state = venue.city + ', ' + venue.state
+      for city_data in data:
+          if city_data['city_state'] == city_state:
+              venue_data = {
+                            'id': venue.id,
+                            'name': venue.name,
+                            'num_upcoming_shows': 0,
+                            }
+              city_data['venues'].append(venue_data)
+  # data=[{
+  #   "city": "San Francisco",
+  #   "state": "CA",
+  #   "venues": [{
+  #     "id": 1,
+  #     "name": "The Musical Hop",
+  #     "num_upcoming_shows": 0,
+  #   }, {
+  #     "id": 3,
+  #     "name": "Park Square Live Music & Coffee",
+  #     "num_upcoming_shows": 1,
+  #   }]
+  # }, {
+  #   "city": "New York",
+  #   "state": "NY",
+  #   "venues": [{
+  #     "id": 2,
+  #     "name": "The Dueling Pianos Bar",
+  #     "num_upcoming_shows": 0,
+  #   }]
+  # }]
   return render_template('pages/venues.html', areas=data);
 
 @app.route('/venues/search', methods=['POST'])
