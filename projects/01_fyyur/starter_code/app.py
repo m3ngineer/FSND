@@ -332,25 +332,28 @@ def create_venue_submission():
   # TODO: insert form data as a new Venue record in the db, instead
   # TODO: modify data to be the data object returned from db insertion
 
-  newVenue = Venue(id = 1,
-                  name = request.form['name'],
-                  genres = request.form['genres'],
-                  city = request.form['city'],
-                  state = request.form['state'],
-                  address = request.form['address'],
-                  phone = request.form['phone'],
-                  website = request.form['website'],
-                  facebook_link = request.form['facebook_link'],
-                  seeking_talent = request.form['seeking_talent'],
-                  seeking_description = request.form['seeking_description'],
-                  image_link = request.form['image_link'],
-                  )
+  try:
+      newVenue = Venue(
+                      name = request.form['name'],
+                      genres = request.form['genres'],
+                      city = request.form['city'],
+                      state = request.form['state'],
+                      address = request.form['address'],
+                      phone = request.form['phone'],
+                      # website = request.form['website'],
+                      facebook_link = request.form['facebook_link'],
+                      # seeking_talent = request.form['seeking_talent'],
+                      # seeking_description = request.form['seeking_description'],
+                      # image_link = request.form['image_link'],
+                      )
 
-  db.session.add(newVenue)
-  # db.session.commit()
+      db.session.add(newVenue)
+      db.session.commit()
 
-  # on successful db insert, flash success
-  flash('Venue ' + request.form['name'] + ' was successfully listed!')
+      # on successful db insert, flash success
+      flash('Venue ' + request.form['name'] + ' was successfully listed!')
+  except Exception as e:
+      flash('There was an error creating the venue ' + request.form['name'] + '!')
   # TODO: on unsuccessful db insert, flash an error instead.
   # e.g., flash('An error occurred. Venue ' + data.name + ' could not be listed.')
   # see: http://flask.pocoo.org/docs/1.0/patterns/flashing/
