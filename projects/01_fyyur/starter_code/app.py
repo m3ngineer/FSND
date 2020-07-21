@@ -13,6 +13,7 @@ from logging import Formatter, FileHandler
 from flask_wtf import Form
 from forms import *
 from flask_migrate import Migrate
+from datetime import datetime
 #----------------------------------------------------------------------------#
 # App Config.
 #----------------------------------------------------------------------------#
@@ -73,12 +74,10 @@ class Artist(db.Model):
 class Show(db.Model):
     __tablename__ = 'Show'
 
-    artist_id = db.Column(db.Integer, primary_key=True)
-    artist_name = db.Column(db.String(120))
-    start_time = db.Column(db.DateTime)
-    artist_image_link =db.Column(db.String(500))
-    venue = db.Column(db.String(), db.ForeignKey('Venue.id'), nullable=False)
-    artist = db.Column(db.String(), db.ForeignKey('Artist.id'), nullable=False)
+    id = db.Column(db.Integer, primary_key=True)
+    artist_id = db.Column(db.Integer, db.ForeignKey('Artist.id'), nullable=False)
+    start_time = db.Column(db.DateTime, nullable=False)
+    venue_id = db.Column(db.String(), db.ForeignKey('Venue.id'), nullable=False)
 
 #----------------------------------------------------------------------------#
 # Filters.
@@ -623,7 +622,7 @@ def shows():
   # TODO: replace with real venues data.
   #       num_shows should be aggregated based on number of upcoming shows per venue.
 
-  shows = Shows.query.all()
+  shows = Show.query.all()
 
   data = []
   # for show in shows:
@@ -684,12 +683,22 @@ def create_shows():
 def create_show_submission():
   # called to create new shows in the db, upon submitting new show listing form
   # TODO: insert form data as a new Show record in the db, instead
+  formatted_dt = datetime.strptime(request.form['start_time'], '%Y-%m-%d %H:%M:%S')
+  try:
+      newShow = Show(
+                      artist_id = request.form['artist_id'],
+                      venue_id = request.form['venue_id'],
+                      start_time = formatted_dt,
+                      )
 
-  # on successful db insert, flash success
-  flash('Show was successfully listed!')
-  # TODO: on unsuccessful db insert, flash an error instead.
-  # e.g., flash('An error occurred. Show could not be listed.')
-  # see: http://flask.pocoo.org/docs/1.0/patterns/flashing/
+      db.session.add(newShow)
+      db.session.commit()
+
+      flash('Show was successfully listed!')
+  except Exception as e:
+      print(e)
+      flash('There was an error listing the show!')
+
   return render_template('pages/home.html')
 
 @app.errorhandler(404)
