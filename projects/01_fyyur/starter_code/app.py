@@ -149,7 +149,10 @@ def venues():
   # TODO: replace with real venues data.
   #       num_shows should be aggregated based on number of upcoming shows per venue.
 
-  venues = Venue.query.all()
+  now = datetime.now()
+
+  venues = Venue.query. \
+    join(Show, Show.venue_id == Venue.id).all()
 
   venue_cities = Venue.query.with_entities(Venue.city, Venue.state).distinct()
   venue_cities = [city_state for city_state in venue_cities]
@@ -166,7 +169,7 @@ def venues():
               venue_data = {
                             'id': venue.id,
                             'name': venue.name,
-                            'num_upcoming_shows': 0, # TODO: agg number of shows
+                            'num_upcoming_shows': [show for show in venue.show if datetime.strptime(str(show.start_time), '%Y-%m-%d %H:%M:%S') > now],
                             }
               city_data['venues'].append(venue_data)
   # data=[{
@@ -198,7 +201,12 @@ def search_venues():
   # seach for Hop should return "The Musical Hop".
   # search for "Music" should return "The Musical Hop" and "Park Square Live Music & Coffee"
     print(request.form.get('search_term', ''))
-    venues =  Venue.query.filter(Venue.name.contains(request.form.get('search_term', '')))
+
+    now = datetime.now()
+
+    venues =  Venue.query. \
+                join(Show, Show.venue_id == Venue.id). \
+                filter(Venue.name.contains(request.form.get('search_term', '')))
 
     response = {'data': [], 'count': len([v for v in venues])}
     for venue in venues:
@@ -206,7 +214,7 @@ def search_venues():
         'count': len([v for v in venues]),
         'id': venue.id,
         'name': venue.name,
-        'num_upcoming_shows': 0,
+        'num_upcoming_shows': [show for show in venue.show if datetime.strptime(str(show.start_time), '%Y-%m-%d %H:%M:%S') > now],
       })
 
     return render_template('pages/search_venues.html', results=response, search_term=request.form.get('search_term', ''))
@@ -222,28 +230,30 @@ def show_venue(venue_id):
         join(Show, Show.venue_id == Venue.id). \
         join(Artist, Artist.id == Show.artist_id). \
         filter_by(id=venue_id).one_or_none()
-    for show in venue.show:
-        show.artist_image_link = show.Artist.image_link
-        show.start_time = str(show.start_time)
+
     if venue:
-      venue_data = {
-                    'id': venue.id,
-                    'name': venue.name,
-                    'genres': venue.genres[1:-1].replace('"', '').split(', '),
-                    'address': venue.address,
-                    'city': venue.city,
-                    'state': venue.state,
-                    'phone': venue.phone,
-                    'website': venue.website,
-                    'facebook_link': venue.facebook_link,
-                    'seeking_talent': venue.seeking_talent,
-                    'seeking_description': venue.seeking_description,
-                    'image_link': venue.image_link,
-                    'past_shows': [show for show in venue.show if datetime.strptime(show.start_time, '%Y-%m-%d %H:%M:%S') <= now], # TODO
-                    'upcoming_shows': [show for show in venue.show if datetime.strptime(show.start_time, '%Y-%m-%d %H:%M:%S') > now], # TODO
-                    'past_shows_count': len([show for show in venue.show if datetime.strptime(show.start_time, '%Y-%m-%d %H:%M:%S') <= now]), # TODO
-                    'upcoming_shows_count': len([show for show in venue.show if datetime.strptime(show.start_time, '%Y-%m-%d %H:%M:%S') > now]), # TODO
-                    }
+        for show in venue.show:
+            print(venue.image_link)
+            show.artist_image_link = show.Artist.image_link
+            show.start_time = str(show.start_time)
+        venue_data = {
+                        'id': venue.id,
+                        'name': venue.name,
+                        'genres': venue.genres[1:-1].replace('"', '').split(', '),
+                        'address': venue.address,
+                        'city': venue.city,
+                        'state': venue.state,
+                        'phone': venue.phone,
+                        'website': venue.website,
+                        'facebook_link': venue.facebook_link,
+                        'seeking_talent': venue.seeking_talent,
+                        'seeking_description': venue.seeking_description,
+                        'image_link': venue.image_link,
+                        'past_shows': [show for show in venue.show if datetime.strptime(show.start_time, '%Y-%m-%d %H:%M:%S') <= now], # TODO
+                        'upcoming_shows': [show for show in venue.show if datetime.strptime(show.start_time, '%Y-%m-%d %H:%M:%S') > now], # TODO
+                        'past_shows_count': len([show for show in venue.show if datetime.strptime(show.start_time, '%Y-%m-%d %H:%M:%S') <= now]), # TODO
+                        'upcoming_shows_count': len([show for show in venue.show if datetime.strptime(show.start_time, '%Y-%m-%d %H:%M:%S') > now]), # TODO
+                        }
     else:
         venue_data = {}
 
@@ -399,8 +409,7 @@ def artists():
   #   "id": 6,
   #   "name": "The Wild Sax Band",
   # }]
-  print(len([v for v in artists]))
-  print(data)
+
   return render_template('pages/artists.html', artists=data)
 
 @app.route('/artists/search', methods=['POST'])
@@ -409,15 +418,19 @@ def search_artists():
   # seach for "A" should return "Guns N Petals", "Matt Quevado", and "The Wild Sax Band".
   # search for "band" should return "The Wild Sax Band".
 
-  artists =  Artist.query.filter(Artist.name.contains(request.form.get('search_term', ''))).all()
-  print([a for a in artists])
+  now = datetime.now()
+
+  artists =  Artist.query. \
+    join(Show, Show.artist_id == Artist.id). \
+    filter(Artist.name.contains(request.form.get('search_term', ''))).all()
+
   response = {'data': [], 'count': len([a for a in artists])}
 
   for artist in artists:
     response['data'].append({
       'id': artist.id,
       'name': artist.name,
-      'num_upcoming_shows': 0, #TODO
+      'num_upcoming_shows': len([show for show in venue.show if datetime.strptime(show.start_time, '%Y-%m-%d %H:%M:%S') > now]),
     })
 
   return render_template('pages/search_artists.html', results=response, search_term=request.form.get('search_term', ''))
@@ -427,29 +440,34 @@ def show_artist(artist_id):
   # shows the venue page with the given venue_id
   # TODO: replace with real venue data from the venues table, using venue_id
 
-  artist = Artist.query.filter_by(id=artist_id).one_or_none()
+    now = datetime.now()
 
-  if artist:
-    artist_data = {
-                  'id': artist.id,
-                  'name': artist.name,
-                  'genres': artist.genres[1:-1].replace('"', '').split(', '),
-                  # 'address': artist.address,
-                  # 'city': artist.city,
-                  # 'state': artist.state,
-                  'phone': artist.phone,
-                  'website': artist.website,
-                  'facebook_link': artist.facebook_link,
-                  'seeking_venue': artist.seeking_venue,
-                  'seeking_description': artist.seeking_description,
-                  'image_link': artist.image_link,
-                  'past_shows': [], # TODO
-                  'upcoming_shows': [], # TODO
-                  'past_shows_count': 0, # TODO
-                  'upcoming_shows_count': 0, # TODO
-                  }
-  else:
-      artist_data = {}
+    artist = Artist.query. \
+        join(Show, Show.artist_id == Artist.id). \
+        join(Venue, Venue.id == Show.venue_id). \
+        filter_by(id=artist_id).one_or_none()
+
+    if artist:
+        for show in artist.show:
+            show.venue_image_link = show.Venue.image_link
+            show.start_time = str(show.start_time)
+        artist_data = {
+                      'id': artist.id,
+                      'name': artist.name,
+                      'genres': artist.genres[1:-1].replace('"', '').split(', '),
+                      'phone': artist.phone,
+                      'website': artist.website,
+                      'facebook_link': artist.facebook_link,
+                      'seeking_venue': artist.seeking_venue,
+                      'seeking_description': artist.seeking_description,
+                      'image_link': artist.image_link,
+                      'past_shows': [show for show in artist.show if datetime.strptime(show.start_time, '%Y-%m-%d %H:%M:%S') <= now], # TODO
+                      'upcoming_shows': [show for show in artist.show if datetime.strptime(show.start_time, '%Y-%m-%d %H:%M:%S') > now], # TODO
+                      'past_shows_count': len([show for show in artist.show if datetime.strptime(show.start_time, '%Y-%m-%d %H:%M:%S') <= now]), # TODO
+                      'upcoming_shows_count': len([show for show in artist.show if datetime.strptime(show.start_time, '%Y-%m-%d %H:%M:%S') > now]), # TODO
+                      }
+    else:
+        artist_data = {}
 
 
   # data1={
@@ -524,7 +542,7 @@ def show_artist(artist_id):
   #   "upcoming_shows_count": 3,
   # }
   # data = list(filter(lambda d: d['id'] == artist_id, [data1, data2, data3]))[0]
-  return render_template('pages/show_artist.html', artist=artist_data)
+    return render_template('pages/show_artist.html', artist=artist_data)
 
 #  Update
 #  ----------------------------------------------------------------
