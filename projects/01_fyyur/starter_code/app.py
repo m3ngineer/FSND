@@ -216,8 +216,15 @@ def show_venue(venue_id):
   # shows the venue page with the given venue_id
   # TODO: replace with real venue data from the venues table, using venue_id
 
-    venue = Venue.query.filter_by(id=venue_id).one_or_none()
+    now = datetime.now()
 
+    venue = Venue.query. \
+        join(Show, Show.venue_id == Venue.id). \
+        join(Artist, Artist.id == Show.artist_id). \
+        filter_by(id=venue_id).one_or_none()
+    for show in venue.show:
+        show.artist_image_link = show.Artist.image_link
+        show.start_time = str(show.start_time)
     if venue:
       venue_data = {
                     'id': venue.id,
@@ -232,10 +239,10 @@ def show_venue(venue_id):
                     'seeking_talent': venue.seeking_talent,
                     'seeking_description': venue.seeking_description,
                     'image_link': venue.image_link,
-                    'past_shows': [], # TODO
-                    'upcoming_shows': [], # TODO
-                    'past_shows_count': 0, # TODO
-                    'upcoming_shows_count': 0, # TODO
+                    'past_shows': [show for show in venue.show if datetime.strptime(show.start_time, '%Y-%m-%d %H:%M:%S') <= now], # TODO
+                    'upcoming_shows': [show for show in venue.show if datetime.strptime(show.start_time, '%Y-%m-%d %H:%M:%S') > now], # TODO
+                    'past_shows_count': len([show for show in venue.show if datetime.strptime(show.start_time, '%Y-%m-%d %H:%M:%S') <= now]), # TODO
+                    'upcoming_shows_count': len([show for show in venue.show if datetime.strptime(show.start_time, '%Y-%m-%d %H:%M:%S') > now]), # TODO
                     }
     else:
         venue_data = {}
@@ -626,8 +633,6 @@ def shows():
     join(Venue, Venue.id == Show.venue_id). \
     join(Artist, Artist.id == Show.artist_id).all()
 
-  for show in shows:
-      print(show.Venue.name)
   data = []
   for show in shows:
       data.append({
@@ -700,7 +705,6 @@ def create_show_submission():
 
       flash('Show was successfully listed!')
   except Exception as e:
-      print(e)
       flash('There was an error listing the show!')
 
   return render_template('pages/home.html')
